@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import math
 
 diamond = cv2.imread('shapeTemplates/diamond.jpg')
 oval = cv2.imread('shapeTemplates/oval.jpg')
@@ -17,7 +18,7 @@ ovalTemplate = cv2.imread('shapeTemplates/oval.jpg')
 squiggleTemplate = cv2.imread('shapeTemplates/squiggle.jpg')
 
 
-game1 = cv2.imread('setgame2.jpg')
+game1 = cv2.imread('setgame1.jpg')
 
 
 game1gray = cv2.cvtColor(game1, cv2.COLOR_BGR2GRAY)
@@ -29,20 +30,62 @@ eroded = cv2.erode(thresh, kernel, iterations = 1)
 
 contours, hierarchy = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-print "contours found:", len(contours)
+def pythagorean(distanceXY):
+    return ((distanceXY[0] ** 2) + (distanceXY[1] ** 2))
 
-cv2.drawContours(game1, contours, -1, (0, 255, 0), 3)
+print "contours found:", len(contours)
 
 cards = []
 
 for (i, c) in enumerate(contours):
-    print 'this is a contour for one card:', c
-    (x, y, w, h) = cv2.boundingRect(c)
-    single_card = game1[y+10:y+(h-10), x+10:x+(w-10)]
-    cv2.imshow('cropped', single_card)
-    cv2.waitKey()
-    cards.append(single_card)
+    quad1 = []
+    quad2 = []
+    quad3 = []
+    quad4 = []
 
+    M = cv2.moments(c)
+    cx = int(M['m10'] / M['m00'])
+    cy = int(M['m01'] / M['m00'])
+
+    for (i, d) in enumerate(c):
+
+        distance = [(d[0][0] - cx), (d[0][1] - cy)]
+        if (distance[0] < 0) and (distance[1] < 0) :
+            quad1.append(distance)
+            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (0,0,0), -1)
+        if (distance[0] < 0) and (distance[1] > 0) :
+            quad2.append(distance)
+            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (255,0,0), -1)
+        if (distance[0] > 0) and (distance[1] > 0) :
+            quad3.append(distance)
+            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (0,255,0), -1)
+        if (distance[0] > 0) and (distance[1] < 0) :
+            quad4.append(distance)
+            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (0,0,255), -1)d
+
+    top_left = sorted(quad1, key = pythagorean, reverse = True)[0]
+    bottom_left = sorted(quad2, key = pythagorean, reverse = True)[0]
+    bottom_right = sorted(quad3, key = pythagorean, reverse = True)[0]
+    top_right = sorted(quad4, key = pythagorean, reverse = True)[0]
+
+    distance_left_midpoint_above_centroid = (top_left[1] + bottom_left[1])/-2
+    distance_left_midpoint_from_center = (top_left[0] + bottom_left[0])/-2
+    angle = math.degrees(math.atan(float(distance_left_midpoint_above_centroid)/float(distance_left_midpoint_from_center)))
+
+    (x, y, w, h) = cv2.boundingRect(c)
+
+    cv2.rectangle(game1, (x,y), (x+w,y+h), (0,0,255), 1)
+    height_to_subtract = (abs(distance_left_midpoint_above_centroid) + 0.04 * h)
+    width_to_subtract = int(w - math.cos(math.radians(angle)) * w + 0.09 * w)
+    single_card = game1[y:y+h, x:x+w]
+    rotation_matrix = cv2.getRotationMatrix2D((w/2, h/2), angle, 1)
+    rotated_image = cv2.warpAffine(single_card, rotation_matrix, (w,h))
+    print distance_left_midpoint_above_centroid
+    print width_to_subtract
+    rotated_cropped = rotated_image[height_to_subtract:h-height_to_subtract, width_to_subtract:w-width_to_subtract]
+
+    cards.append(rotated_cropped)
+#
 for (i, c) in enumerate(cards):
     cardString = ''
 
@@ -87,11 +130,9 @@ for (i, c) in enumerate(cards):
 
 # evaluate color (WIP)
 
-    # cv2.imshow('current card', c)
+    cv2.imshow('current card', c)
     print cardString
-    # cv2.waitKey()
-
-
+    cv2.waitKey()
 
 cv2.waitKey()
 cv2.destroyAllWindows()
