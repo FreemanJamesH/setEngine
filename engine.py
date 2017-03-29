@@ -19,6 +19,7 @@ squiggleTemplate = cv2.imread('shapeTemplates/squiggle.jpg')
 
 game1 = cv2.imread('setgame2.jpg')
 
+
 game1gray = cv2.cvtColor(game1, cv2.COLOR_BGR2GRAY)
 ret, thresh = cv2.threshold(game1gray, 150, 255, 0)
 
@@ -26,7 +27,7 @@ kernel = np.ones((4,4), np.uint8)
 
 eroded = cv2.erode(thresh, kernel, iterations = 1)
 
-contours, hierarchy = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+contours, hierarchy = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 print "contours found:", len(contours)
 
@@ -35,9 +36,12 @@ cv2.drawContours(game1, contours, -1, (0, 255, 0), 3)
 cards = []
 
 for (i, c) in enumerate(contours):
+    print 'this is a contour for one card:', c
     (x, y, w, h) = cv2.boundingRect(c)
-    cropped_contour = game1[y+10:y+(h-10), x+10:x+(w-10)]
-    cards.append(cropped_contour)
+    single_card = game1[y+10:y+(h-10), x+10:x+(w-10)]
+    cv2.imshow('cropped', single_card)
+    cv2.waitKey()
+    cards.append(single_card)
 
 for (i, c) in enumerate(cards):
     cardString = ''
@@ -83,9 +87,11 @@ for (i, c) in enumerate(cards):
 
 # evaluate color (WIP)
 
-    cv2.imshow('current card', c)
+    # cv2.imshow('current card', c)
     print cardString
-    cv2.waitKey()
+    # cv2.waitKey()
+
+
 
 cv2.waitKey()
 cv2.destroyAllWindows()
