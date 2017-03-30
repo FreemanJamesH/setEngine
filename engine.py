@@ -134,6 +134,14 @@ for (i, c) in enumerate(cards):
 
 # evaluate color (WIP)
 
+    pixelSample = c[cardContoursExternal[0][0][0][1], cardContoursExternal[0][0][0][0]]
+    if pixelSample[0] > pixelSample[1] and pixelSample[0] > pixelSample[2]:
+        cardString += 'Purple'
+    elif pixelSample[1] > pixelSample[2]:
+        cardString += 'Green'
+    else:
+        cardString += 'Red'
+
     cv2.imshow('current card', c)
     print cardString
     cv2.waitKey()
