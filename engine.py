@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 import math
 
+game = cv2.imread('home1cleaner.jpg')
+image_area =  game.shape[0] * game.shape[1]
+
 diamond = cv2.imread('shapeTemplates/diamond.jpg')
 oval = cv2.imread('shapeTemplates/oval.jpg')
 squiggle = cv2.imread('shapeTemplates/squiggle.jpg')
@@ -13,40 +16,36 @@ diamondContours, hierarchy = cv2.findContours(diamondThresh, cv2.RETR_CCOMP, cv2
 ovalContours, hierarchy = cv2.findContours(ovalThresh, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
 squiggleContours, hierarchy = cv2.findContours(squiggleThresh, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
 
+def pythagorean(distanceXY):
+    return ((distanceXY[0] ** 2) + (distanceXY[1] ** 2))
 
-ovalTemplate = cv2.imread('shapeTemplates/oval.jpg')
-squiggleTemplate = cv2.imread('shapeTemplates/squiggle.jpg')
 
-game1 = cv2.imread('home1cleaner.jpg')
+contours = []
+cards = []
 
-image_area =  game1.shape[0] * game1.shape[1]
-
-game1gray = cv2.cvtColor(game1, cv2.COLOR_BGR2GRAY)
-ret, thresh = cv2.threshold(game1gray, 150, 255, 0)
+gamegray = cv2.cvtColor(game, cv2.COLOR_BGR2GRAY)
+ret, thresh = cv2.threshold(gamegray, 150, 255, 0)
 kernel = np.ones((4,4), np.uint8)
 
 eroded = cv2.erode(thresh, kernel, iterations = 1)
 
 contoursDirty, hierarchy = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-contours = []
 
 for cnt in contoursDirty:
     area = cv2.contourArea(cnt)
     if (area/image_area > 0.01):
         contours.append(cnt)
 
+cv2.drawContours(game, contours, -1, (0,255,0), 3)
 
-cv2.drawContours(game1, contours, -1, (0,255,0), 3)
 
-
-cv2.imshow('game1 w/ contours', game1)
-def pythagorean(distanceXY):
-    return ((distanceXY[0] ** 2) + (distanceXY[1] ** 2))
+cv2.imshow('game w/ contours', game)
 #
 print "contours found:", len(contours)
 
-cards = []
+
+# preprocessing
 
 for (i, c) in enumerate(contours):
     quad1 = []
@@ -63,16 +62,12 @@ for (i, c) in enumerate(contours):
         distance = [(d[0][0] - cx), (d[0][1] - cy)]
         if (distance[0] < 0) and (distance[1] < 0) :
             quad1.append(distance)
-            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (0,0,0), -1)
         if (distance[0] < 0) and (distance[1] > 0) :
             quad2.append(distance)
-            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (255,0,0), -1)
         if (distance[0] > 0) and (distance[1] > 0) :
             quad3.append(distance)
-            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (0,255,0), -1)
         if (distance[0] > 0) and (distance[1] < 0) :
             quad4.append(distance)
-            # cv2.circle(game1, (d[0][0], d[0][1]), 5, (0,0,255), -1)d
 
     top_left = sorted(quad1, key = pythagorean, reverse = True)[0]
     bottom_left = sorted(quad2, key = pythagorean, reverse = True)[0]
@@ -85,36 +80,26 @@ for (i, c) in enumerate(contours):
 
     (x, y, w, h) = cv2.boundingRect(c)
 
-    cv2.rectangle(game1, (x,y), (x+w,y+h), (0,0,255), 1)
     height_to_subtract = (abs(distance_left_midpoint_above_centroid) + 0.04 * h)
     width_to_subtract = int(w - math.cos(math.radians(angle)) * w + 0.09 * w)
-    single_card = game1[y:y+h, x:x+w]
+    single_card = game[y:y+h, x:x+w]
     rotation_matrix = cv2.getRotationMatrix2D((w/2, h/2), angle, 1)
     rotated_image = cv2.warpAffine(single_card, rotation_matrix, (w,h))
-    print distance_left_midpoint_above_centroid
-    print width_to_subtract
     rotated_cropped = rotated_image[height_to_subtract:h-height_to_subtract, width_to_subtract:w-width_to_subtract]
 
     cards.append(rotated_cropped)
-#
+
 for (i, c) in enumerate(cards):
     cardString = ''
 
-# preprocessing
 
     if c.shape[0] > c.shape[1]:
         c = cv2.transpose(c)
-    graycard = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY)
-    # blurredcard = cv2.GaussianBlur(graycard, (5,5), 0)
-    # ret, threshcard = cv2.threshold(graycard, 180,255, cv2.THRESH_BINARY_INV)
-    _,threshcard = cv2.threshold(graycard, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    # newKernel = np.ones((1,2), np.uint8)
-    # eroded = cv2.erode(threshcard, newKernel, iterations = 1)
 
+    graycard = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY)
+    _,threshcard = cv2.threshold(graycard, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
     cv2.imshow('threshcard', threshcard)
-    # cv2.imshow('eroded', eroded)
-
 
 # contours calculated
 
@@ -133,7 +118,6 @@ for (i, c) in enumerate(cards):
         cardString += 'emp'
     elif len(cardContoursAll) > (len(cardContoursExternal) * 2):
         cardString += 'str'
-
 
 # evaluate shape by comparing to template
 
