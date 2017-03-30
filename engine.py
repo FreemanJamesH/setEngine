@@ -17,22 +17,33 @@ squiggleContours, hierarchy = cv2.findContours(squiggleThresh, cv2.RETR_CCOMP, c
 ovalTemplate = cv2.imread('shapeTemplates/oval.jpg')
 squiggleTemplate = cv2.imread('shapeTemplates/squiggle.jpg')
 
+game1 = cv2.imread('home1cleaner.jpg')
 
-game1 = cv2.imread('setgame1.jpg')
-
+image_area =  game1.shape[0] * game1.shape[1]
 
 game1gray = cv2.cvtColor(game1, cv2.COLOR_BGR2GRAY)
 ret, thresh = cv2.threshold(game1gray, 150, 255, 0)
-
 kernel = np.ones((4,4), np.uint8)
 
 eroded = cv2.erode(thresh, kernel, iterations = 1)
 
-contours, hierarchy = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+contoursDirty, hierarchy = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+contours = []
+
+for cnt in contoursDirty:
+    area = cv2.contourArea(cnt)
+    if (area/image_area > 0.01):
+        contours.append(cnt)
+
+
+cv2.drawContours(game1, contours, -1, (0,255,0), 3)
+
+
+cv2.imshow('game1 w/ contours', game1)
 def pythagorean(distanceXY):
     return ((distanceXY[0] ** 2) + (distanceXY[1] ** 2))
-
+#
 print "contours found:", len(contours)
 
 cards = []
@@ -94,7 +105,16 @@ for (i, c) in enumerate(cards):
     if c.shape[0] > c.shape[1]:
         c = cv2.transpose(c)
     graycard = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY)
-    ret, threshcard = cv2.threshold(graycard, 160,255, cv2.THRESH_BINARY_INV)
+    # blurredcard = cv2.GaussianBlur(graycard, (5,5), 0)
+    # ret, threshcard = cv2.threshold(graycard, 180,255, cv2.THRESH_BINARY_INV)
+    _,threshcard = cv2.threshold(graycard, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    # newKernel = np.ones((1,2), np.uint8)
+    # eroded = cv2.erode(threshcard, newKernel, iterations = 1)
+
+
+    cv2.imshow('threshcard', threshcard)
+    # cv2.imshow('eroded', eroded)
+
 
 # contours calculated
 
